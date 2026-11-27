@@ -6,7 +6,7 @@
 
 # 
 
-# Architect Academy is an interactive educational web application designed to help students and developers understand \*\*System Design\*\* and \*\*Computer Networking\*\* concepts through detailed theoretical explanations, real-world examples, architecture diagrams, and interactive 3D visualizations.
+# Architect Academy is an interactive educational web application designed to help students and developers understand \*\*System Design\*\* and \*\*Computer Networking\*\* through detailed theoretical explanations, real-world examples, architecture diagrams, and interactive 3D visualizations.
 
 # 
 
@@ -52,31 +52,31 @@
 
 # 
 
-# | Technology        | Purpose                                                 |
+# | Technology | Purpose |
 
-# | ----------------- | ------------------------------------------------------- |
+# |---|---|
 
-# | React.js          | Frontend development                                    |
+# | React.js | Frontend development |
 
-# | TypeScript        | Type safety                                             |
+# | TypeScript | Type safety |
 
-# | Vite              | Development server and build tool                       |
+# | Vite | Development server and build tool |
 
-# | Tailwind CSS      | Styling                                                 |
+# | Tailwind CSS | Styling |
 
-# | React Router DOM  | Application navigation                                  |
+# | React Router DOM | Application navigation |
 
-# | Three.js          | 3D visualizations                                       |
+# | Three.js | 3D visualizations |
 
-# | React Three Fiber | 3D integration with React                               |
+# | React Three Fiber | 3D integration with React |
 
-# | Drei              | 3D helper components                                    |
+# | Drei | 3D helper components |
 
-# | Framer Motion     | Animations                                              |
+# | Framer Motion | Animations |
 
-# | Lucide React      | Icons                                                   |
+# | Lucide React | Icons |
 
-# | LocalStorage      | Local persistence of user preferences and learning data |
+# | LocalStorage | Local persistence of user preferences and learning data |
 
 # 
 
@@ -132,13 +132,13 @@
 
 # 
 
-# Open your terminal or command prompt and execute:
+# Open your terminal or command prompt:
 
 # 
 
 # ```bash
 
-# git clone https://github.com/vikrammr198-lgtm/architect-academy.git
+# git clone https://github.com/vikrammr198-lgtm/Architect-Academy.git
 
 # ```
 
@@ -150,17 +150,13 @@
 
 # ```bash
 
-# cd System\_Design-Networking
+# cd Architect-Academy
 
 # ```
 
 # 
 
 # \### Step 3: Install Dependencies
-
-# 
-
-# Install all required project dependencies:
 
 # 
 
@@ -173,10 +169,6 @@
 # 
 
 # \### Step 4: Start the Development Server
-
-# 
-
-# Run the following command:
 
 # 
 
@@ -216,7 +208,7 @@
 
 # 
 
-# To create an optimized production build, execute:
+# To create an optimized production build:
 
 # 
 
@@ -233,10 +225,6 @@
 # 
 
 # \### Preview the Production Build
-
-# 
-
-# To preview the production version locally:
 
 # 
 
@@ -262,7 +250,7 @@
 
 # ```text
 
-# System\_Design-Networking/
+# Architect-Academy/
 
 # │
 
@@ -274,35 +262,23 @@
 
 # │   ├── assets/             # Images and other assets
 
-# │   │
-
 # │   ├── components/         # Reusable UI components
-
-# │   │
 
 # │   ├── pages/              # Application pages
 
-# │   │
-
 # │   ├── data/               # Learning content and topic data
-
-# │   │
 
 # │   ├── visualizations/     # Interactive 3D visualizations
 
-# │   │
-
 # │   ├── hooks/              # Custom React hooks
-
-# │   │
 
 # │   ├── store/              # Application state management
 
 # │   │
 
-# │   ├── App.tsx              # Main application component
+# │   ├── App.tsx             # Main application component
 
-# │   └── main.tsx             # Application entry point
+# │   └── main.tsx            # Application entry point
 
 # │
 
@@ -322,7 +298,7 @@
 
 # 
 
-# \*Note: The directory structure above is illustrative. Update it to match the actual project structure.\*
+# \*Note: The directory structure is illustrative. Refer to the actual repository for the complete structure.\*
 
 # 
 
@@ -400,7 +376,7 @@
 
 # \- GitHub: \[@vikrammr198-lgtm](https://github.com/vikrammr198-lgtm)
 
-# \- LinkedIn: \[Vikram M ](https://www.linkedin.com/in/vikram-m-r-73a7a032b/)R
+# \- LinkedIn: \[Vikram M R](https://www.linkedin.com/in/vikram-m-r-73a7a032b/)
 
 # 
 
@@ -412,5 +388,5 @@
 
 # 
 
-# This project is available under the MIT License.
+# This project is licensed under the MIT License. See the `LICENSE` file for details.
 
