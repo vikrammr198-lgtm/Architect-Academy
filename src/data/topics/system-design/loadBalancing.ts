@@ -1,0 +1,265 @@
+import { TopicContent } from '../../../types';
+
+export const loadBalancingTopic: TopicContent = {
+  id: 'load-balancing-fundamentals',
+  title: 'What is Load Balancing? (L4 vs L7, Algorithms & Health Checks)',
+  module: 'system-design',
+  category: 'Load Balancing & Reverse Proxy',
+  readTime: '10 min',
+  difficulty: 'Beginner',
+  summary: 'Load balancing distributes incoming client traffic across multiple servers to prevent overload, maximize throughput, minimize response time, and ensure high system availability.',
+  introduction: {
+    definition: 'A load balancer is a traffic distributor that sits in front of server pools, algorithmically dispatching incoming requests across available, healthy compute nodes.',
+    analogousStory: 'Imagine airport security during the holiday rush. If all 5,000 travelers swarmed a single metal detector line, the airport would grind to a halt. Instead, a queue manager directs each arriving passenger to whichever line is moving fastest or has the shortest wait, balancing the load so no single security officer is swamped.',
+    keyTakeaway: 'Load balancing turns individual vulnerable servers into a unified, horizontally scalable, and highly available server pool.',
+  },
+  whyRequired: {
+    problemsSolved: [
+      'Single server saturation under traffic spikes causing 504 Gateway Timeouts.',
+      'Inability to scale vertically without costly server hardware upgrades and maintenance downtime.',
+      'Total site blackout if an individual server experiences a hardware crash or memory leak.',
+      'Uneven CPU and memory distribution across compute fleets.',
+    ],
+    realWorldImpact: 'Modern platforms like Amazon and Google handle hundreds of millions of requests per second by distributing traffic across thousands of load-balanced clusters.',
+    metricsAffected: [
+      'System Uptime (99.999% availability via automatic failover)',
+      'Median and P99 Latency stability under heavy load',
+      'Server Utilization optimization (balancing CPU/RAM across instances)',
+    ],
+  },
+  coreArchitecture: {
+    description: 'A load balancer continuously monitors backend server health, intercepts incoming transport or application layer requests, applies a configured routing algorithm, and relays traffic seamlessly.',
+    components: [
+      {
+        name: 'VIP (Virtual IP) & DNS Frontend',
+        role: 'Public Endpoint',
+        details: 'The advertised IP address to which public DNS points. All client connections terminate or pass through here.',
+      },
+      {
+        name: 'Algorithm Scheduler',
+        role: 'Decision Engine',
+        details: 'Applies policies such as Round Robin, Weighted Round Robin, Least Connections, or IP Hash to choose the target node.',
+      },
+      {
+        name: 'Active Health Checker',
+        role: 'Failure Detection',
+        details: 'Polls backend instances every 2-5 seconds. If a node fails 3 consecutive health checks, it is removed from rotation in real-time.',
+      },
+      {
+        name: 'Backend Target Group',
+        role: 'Workload Processors',
+        details: 'Heterogeneous or homogeneous application servers serving user queries.',
+      },
+    ],
+  },
+  howItWorks: {
+    steps: [
+      { stepNumber: 1, action: 'Request Arrival', technicalDetail: 'Client initiates a connection to the load balancer VIP on port 443.' },
+      { stepNumber: 2, action: 'Algorithm Evaluation', technicalDetail: 'Load balancer checks active connections on all healthy nodes. If using Least Connections, it picks Server 03 with only 12 active streams.' },
+      { stepNumber: 3, action: 'Traffic Forwarding', technicalDetail: 'At Layer 4 (TCP level via NAT) or Layer 7 (HTTP reverse proxy mode), the packet is relayed to Server 03.' },
+      { stepNumber: 4, action: 'Health Monitoring', technicalDetail: 'In the background, synthetic health probes continuously confirm each server\'s HTTP status 200.' },
+    ],
+  },
+  visualizationId: 'load-balancer-3d',
+  visualizationScene: 'load-balancer',
+  visualizationModes: [
+    { id: 'least-connections', label: 'Least Connections' },
+    { id: 'round-robin', label: 'Round Robin' },
+    { id: 'ip-hash', label: 'IP Hash Pinning' },
+  ],
+  visualizationType: 'system-design',
+  animationSteps: [
+    {
+      step: 1,
+      title: 'Step 1: Incoming Client Requests Stream In',
+      description: 'Multiple users across different regions send requests to https://shop.app. Traffic converges at the central Load Balancer.',
+      activeNodes: ['client-1', 'client-2', 'load-balancer'],
+      packet: { from: 'client-1', to: 'load-balancer', label: 'HTTP GET /products', type: 'request' },
+    },
+    {
+      step: 2,
+      title: 'Step 2: Load Balancer Evaluates Algorithm & Health',
+      description: 'The Load Balancer checks algorithm configuration (Round Robin vs Least Connections) and inspects the health table to ensure target servers are alive.',
+      activeNodes: ['load-balancer'],
+      packet: { from: 'load-balancer', to: 'load-balancer', label: 'Evaluate Least Connections', type: 'sync' },
+    },
+    {
+      step: 3,
+      title: 'Step 3: Forwarding to Optimal Server',
+      description: 'Server A has 45 connections, Server B has 12 connections, Server C has 50 connections. The Load Balancer forwards the request to Server B.',
+      activeNodes: ['load-balancer', 'server-b'],
+      packet: { from: 'load-balancer', to: 'server-b', label: 'Dispatch to Server B (12 conn)', type: 'request' },
+    },
+    {
+      step: 4,
+      title: 'Step 4: Server B Returns Response',
+      description: 'Server B computes the product catalog data and transmits the response back through the load balancer to the requesting client.',
+      activeNodes: ['server-b', 'load-balancer', 'client-1'],
+      packet: { from: 'server-b', to: 'client-1', label: '200 OK (Product List)', type: 'response' },
+    },
+  ],
+  interactiveComponents: [
+    {
+      id: 'client-1',
+      name: 'Client Traffic Pool',
+      role: 'Request Initiators',
+      description: 'Concurrent browser and mobile users issuing HTTPS requests toward the Load Balancer Virtual IP.',
+      metrics: [
+        { label: 'Concurrent Users', value: '12,400' },
+        { label: 'Protocol', value: 'HTTP/2' },
+      ],
+      technologies: ['Browser Clients', 'Mobile SDKs'],
+    },
+    {
+      id: 'client-2',
+      name: 'Mobile API Clients',
+      role: 'Concurrent API Consumers',
+      description: 'Mobile application traffic bursts distributed across backend compute instances.',
+      metrics: [{ label: 'Req Rate', value: '4,200 RPS' }],
+      technologies: ['REST', 'gRPC'],
+    },
+    {
+      id: 'load-balancer',
+      name: 'Central Load Balancer',
+      role: 'Traffic Distribution & Health Guard',
+      description: 'Intelligently schedules requests across available backend workers.',
+      metrics: [
+        { label: 'Algorithm', value: 'Least Connections / Round Robin' },
+        { label: 'Active Targets', value: '4 Online / 1 Draining' },
+      ],
+      technologies: ['AWS ALB', 'HAProxy', 'F5 BIG-IP', 'Nginx Plus'],
+    },
+    {
+      id: 'server-a',
+      name: 'Server Node Alpha',
+      role: 'Worker Instance',
+      description: 'Stateless compute worker serving requests.',
+      metrics: [
+        { label: 'Active Conns', value: '45' },
+        { label: 'Health', value: 'Healthy (HTTP 200)' },
+      ],
+      technologies: ['Docker Container', 'Kubernetes Pod'],
+    },
+    {
+      id: 'server-b',
+      name: 'Server Node Beta',
+      role: 'Worker Instance',
+      description: 'Least loaded worker instance selected dynamically by Least Connections.',
+      metrics: [
+        { label: 'Active Conns', value: '12' },
+        { label: 'Health', value: 'Healthy (HTTP 200)' },
+      ],
+      technologies: ['Docker Container', 'Kubernetes Pod'],
+    },
+    {
+      id: 'server-c',
+      name: 'Server Node Gamma',
+      role: 'Worker Instance',
+      description: 'High-load worker instance currently serving long-running reports.',
+      metrics: [
+        { label: 'Active Conns', value: '50' },
+        { label: 'Health', value: 'Healthy (HTTP 200)' },
+      ],
+      technologies: ['Docker Container', 'Kubernetes Pod'],
+    },
+  ],
+  realWorldExample: {
+    company: 'Amazon Web Services (AWS)',
+    scenario: 'Distributing billions of requests across EC2 clusters for millions of global customers.',
+    implementation: 'AWS developed the Application Load Balancer (ALB) and Network Load Balancer (NLB). NLB operates at Layer 4 handling tens of millions of requests per second with ultra-low latency, while ALB operates at Layer 7 evaluating URL paths and HTTP cookies.',
+    scaleDetails: 'Trillions of requests per month across global AWS Availability Zones.',
+  },
+  advantages: [
+    'Seamless horizontal scalability: Add or remove servers without service interruption.',
+    'High availability: Automatic failover within seconds when a backend worker fails.',
+    'Traffic shaping: Route based on path (e.g., /checkout vs /search) or user geography.',
+    'Maintenance flexibility: Drain connections gracefully for software patching.',
+  ],
+  disadvantages: [
+    'Load balancer itself must be configured for high availability to avoid becoming a SPOF.',
+    'Session state complexity: Requires sticky sessions or external distributed session stores (like Redis).',
+    'Extra network hop: Adds sub-millisecond network transit overhead.',
+  ],
+  relatedTopics: [
+    { id: 'reverse-proxy', title: 'Reverse Proxy (Deep Dive)', module: 'system-design' },
+    { id: 'redis-architecture', title: 'Distributed Caching & Redis', module: 'system-design' },
+    { id: 'vertical-vs-horizontal-scaling', title: 'Vertical vs Horizontal Scaling', module: 'system-design' },
+  ],
+  interviewQuestions: [
+    {
+      level: 'beginner',
+      question: 'What is the difference between Layer 4 and Layer 7 load balancing?',
+      answer: 'Layer 4 (Transport Layer) load balancing routes traffic based only on IP addresses and TCP/UDP ports without inspecting application data. It is extremely fast and CPU-efficient. Layer 7 (Application Layer) load balancing inspects HTTP headers, cookies, and URL paths, allowing intelligent routing (e.g. routing /video to video servers and /images to image servers) and cookie-based sticky sessions.',
+      keyPoints: ['L4 = Fast, packet-level (IP + Port)', 'L7 = Smart, content-aware (HTTP URL, headers, cookies)'],
+    },
+    {
+      level: 'intermediate',
+      question: 'When should you choose Least Connections over Round Robin?',
+      answer: 'Round Robin works well when all requests take approximately the same time and servers have equal computing power. However, in applications where requests have vastly differing execution times (e.g., complex SQL reporting queries taking 4 seconds vs lightweight health checks taking 2 milliseconds), Round Robin causes uneven queues. Least Connections distributes new requests to the server with the fewest active streams, preventing server overload.',
+      keyPoints: ['Use Least Connections for long-lived sessions or variable processing workloads', 'Use Round Robin for homogeneous short requests'],
+    },
+    {
+      level: 'advanced',
+      question: 'How do Sticky Sessions work, and why are they generally considered an anti-pattern in cloud architectures?',
+      answer: 'Sticky sessions (session affinity) ensure that all requests from a specific user are consistently routed to the exact same backend server, usually tracked via an HTTP cookie or IP hash. It is considered an anti-pattern because: 1) It causes uneven traffic distribution if a few users generate huge traffic, 2) If that specific server crashes, the user loses their session data, and 3) It impedes auto-scaling. The best-practice alternative is to maintain stateless servers and store session tokens in a distributed cache like Redis.',
+      keyPoints: ['Sticky sessions bind users to one server', 'Anti-pattern because it hampers auto-scaling and loses state on server crash', 'Modern solution: Stateless app servers + Redis session store'],
+    },
+  ],
+  quiz: [
+    {
+      id: 'lb-q1',
+      question: 'Which OSI layer does an Application Load Balancer (ALB) operate on?',
+      options: ['Layer 2 (Data Link)', 'Layer 4 (Transport)', 'Layer 7 (Application)', 'Layer 3 (Network)'],
+      correctAnswer: 2,
+      explanation: 'Layer 7 is the Application Layer where HTTP/HTTPS protocols, headers, and paths are parsed.',
+    },
+    {
+      id: 'lb-q2',
+      question: 'In which scenario is the "Least Connections" algorithm superior to "Round Robin"?',
+      options: [
+        'When requests take wildly differing times to process',
+        'When all servers have identical hardware and zero network latency',
+        'When there is only one backend server',
+        'When DNS caching is permanently disabled',
+      ],
+      correctAnswer: 0,
+      explanation: 'When execution times vary drastically, Least Connections prevents slower requests from piling up on one node.',
+    },
+    {
+      id: 'lb-q3',
+      question: 'What happens when a backend server fails its configured health checks?',
+      options: [
+        'The load balancer deletes the server from the data center permanently',
+        'The load balancer automatically pauses routing new traffic to that server until it recovers',
+        'The load balancer shuts down all other servers',
+        'Clients receive a 404 error code for every request',
+      ],
+      correctAnswer: 1,
+      explanation: 'Failed health checks trigger automatic traffic removal from rotation, redirecting requests to healthy peers.',
+    },
+    {
+      id: 'lb-q4',
+      question: 'What is a "Virtual IP" (VIP) in load balancing?',
+      options: [
+        'A fake IP address that cannot be reached over the internet',
+        'A public-facing IP shared by the load balancer cluster that clients communicate with',
+        'The physical MAC address of a client computer',
+        'The private IP address of a database replica',
+      ],
+      correctAnswer: 1,
+      explanation: 'The VIP is the public entrance point exposed to clients; incoming packets on the VIP are mapped to internal target servers.',
+    },
+    {
+      id: 'lb-q5',
+      question: 'Why are stateless servers preferred over sticky sessions when load balancing?',
+      options: [
+        'Stateless servers allow any request to hit any healthy server, enabling effortless auto-scaling and crash resilience',
+        'Stateless servers require no CPU or RAM',
+        'Sticky sessions cannot support HTTPS',
+        'Stateless servers are only supported on Linux',
+      ],
+      correctAnswer: 0,
+      explanation: 'With stateless servers, requests can be dynamically routed to any instance, and losing a server never corrupts user sessions.',
+    },
+  ],
+};

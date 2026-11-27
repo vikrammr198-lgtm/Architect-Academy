@@ -1,0 +1,320 @@
+import { TopicContent } from '../../../types';
+
+export const reverseProxyTopic: TopicContent = {
+  id: 'reverse-proxy',
+  title: 'Reverse Proxy (Deep Dive: Nginx, SSL Termination, Caching & Routing)',
+  module: 'system-design',
+  category: 'Load Balancing & Reverse Proxy',
+  readTime: '12 min',
+  difficulty: 'Intermediate',
+  summary: 'A reverse proxy is an intermediary server that sits in front of web servers, intercepting client requests to provide security, anonymity, SSL termination, caching, and intelligent routing.',
+  introduction: {
+    definition: 'A reverse proxy is an intermediary gateway placed between internet clients and private backend servers. Unlike a forward proxy which protects and masks clients, a reverse proxy protects, optimizes, and orchestrates traffic for backend servers.',
+    analogousStory: 'Imagine an upscale luxury hotel. Guests (clients) never walk directly into the back-office management, executive rooms, or the master kitchen (backend servers). Instead, all inquiries and orders go through the Chief Concierge desk (Reverse Proxy). The concierge authenticates visitors, delivers immediate brochures from their counter (caching), inspects bags for threats (security / DDoS protection), and routes dinner orders directly to the specialized pastry chef or saucier (request routing).',
+    keyTakeaway: 'Clients believe they are speaking directly with the destination server, but they are communicating entirely with the reverse proxy, leaving backend IP addresses completely concealed.',
+  },
+  whyRequired: {
+    problemsSolved: [
+      'Exposing private backend application IP addresses directly to the public internet makes them vulnerable to targeted zero-day exploits and DDoS attacks.',
+      'Performing CPU-intensive SSL/TLS decryption on every application server wastes compute cycles that should be reserved for business logic.',
+      'Serving static assets (images, CSS, JS, cached JSON) directly from application servers exhausts database connection pools and worker threads.',
+      'Managing multiple microservices without a reverse proxy requires exposing dozens of public ports and separate domain SSL certificates.',
+    ],
+    realWorldImpact: 'Deploying an Nginx or HAProxy reverse proxy reduces application server CPU utilization by 30-50% through SSL termination and connection pooling, while mitigating 95%+ of automated direct port scans.',
+    metricsAffected: [
+      'Time to First Byte (TTFB) reduced via edge response caching',
+      'Backend CPU efficiency increased by 35% via SSL offloading',
+      'Attack surface reduced to a single hardened entry point',
+      'High Availability (zero-downtime rolling deployments)',
+    ],
+  },
+  coreArchitecture: {
+    description: 'A modern reverse proxy cluster intercepts public requests on ports 80/443, decrypts TLS, evaluates routing rules, inspects local in-memory cache, and dispatches the sanitized request to private backend workers over a high-speed private virtual network.',
+    components: [
+      {
+        name: 'Public Ingress & TLS Terminator',
+        role: 'Secure Communication',
+        details: 'Handles public HTTPS handshakes, manages SSL/TLS certificates (e.g., Let\'s Encrypt auto-renewal), decrypts incoming traffic, and re-encrypts if internal mTLS is enforced.',
+      },
+      {
+        name: 'Routing & URL Rewrite Engine',
+        role: 'Traffic Orchestration',
+        details: 'Matches URI paths (e.g., /api/v1/users vs /static/*) and HTTP headers to upstream backend server clusters (Upstream Pools).',
+      },
+      {
+        name: 'Reverse Proxy Cache Store',
+        role: 'Static & Response Caching',
+        details: 'Stores frequently accessed HTTP responses in fast NVMe/RAM, serving 304 Not Modified or cached payloads without waking backend servers.',
+      },
+      {
+        name: 'Health Monitor & Circuit Breaker',
+        role: 'Backend Reliability',
+        details: 'Periodically probes upstream nodes with synthetic health checks (GET /healthz). Automatically removes dead nodes within 1 second.',
+      },
+      {
+        name: 'Private Upstream Cluster',
+        role: 'Application Execution',
+        details: 'Isolated application instances (Node.js, Go, Java, Python) running on private RFC 1918 IP addresses (10.0.x.x or 172.16.x.x).',
+      },
+    ],
+  },
+  howItWorks: {
+    steps: [
+      {
+        stepNumber: 1,
+        action: 'Client DNS & Connection Request',
+        technicalDetail: 'The client resolves api.example.com to the reverse proxy\'s public VIP (Virtual IP) 198.51.100.24 and initiates a TCP SYN on port 443.',
+      },
+      {
+        stepNumber: 2,
+        action: 'TLS Handshake Termination',
+        technicalDetail: 'The reverse proxy negotiates the TLS 1.3 cryptographic session using its local wildcard certificate, offloading CPU-heavy asymmetric math from backend servers.',
+      },
+      {
+        stepNumber: 3,
+        action: 'Cache Inspection (Hit/Miss)',
+        technicalDetail: 'The proxy checks its cache key (MD5 of request method + URI + headers). If valid, it returns the cached response with header X-Cache: HIT immediately in <2ms.',
+      },
+      {
+        stepNumber: 4,
+        action: 'Upstream Routing & Header Injection',
+        technicalDetail: 'On cache miss, the proxy adds forwarding headers (X-Forwarded-For: <Client-IP>, X-Forwarded-Proto: https, X-Request-ID) and proxies the request to an upstream server.',
+      },
+      {
+        stepNumber: 5,
+        action: 'Backend Processing & Response Return',
+        technicalDetail: 'The private backend processes the logic, queries the database, and returns the response to the proxy. The proxy updates its cache and streams the response to the client.',
+      },
+    ],
+  },
+  visualizationId: 'reverse-proxy-3d',
+  visualizationScene: 'reverse-proxy',
+  visualizationModes: [
+    { id: 'reverse-proxy', label: 'Full Reverse Proxy Flow' },
+    { id: 'cache-hit', label: 'Edge Cache HIT' },
+    { id: 'forward-proxy', label: 'Compare Forward Proxy' },
+  ],
+  visualizationType: 'system-design',
+  animationSteps: [
+    {
+      step: 1,
+      title: 'Step 1: Client Transmits Encrypted HTTPS Request',
+      description: 'Client device initiates an HTTPS request to https://api.service.io. The request arrives at the public reverse proxy IP. The private backend IP addresses are completely hidden behind the firewall.',
+      activeNodes: ['client-1', 'reverse-proxy'],
+      packet: { from: 'client-1', to: 'reverse-proxy', label: 'HTTPS GET /api/feed', type: 'request' },
+    },
+    {
+      step: 2,
+      title: 'Step 2: SSL/TLS Termination & Threat Inspection',
+      description: 'The Reverse Proxy (Nginx) terminates the TLS connection, decrypts the payload, validates the HTTP headers, checks rate limits, and inspects for SQL injection/XSS signatures.',
+      activeNodes: ['reverse-proxy'],
+      packet: { from: 'reverse-proxy', to: 'reverse-proxy', label: 'Decrypt TLS & Verify Headers', type: 'sync' },
+    },
+    {
+      step: 3,
+      title: 'Step 3: Fast Cache Lookup Check',
+      description: 'Nginx checks its local fast RAM/SSD cache. If this specific feed payload was requested 5 seconds ago, it delivers an instant X-Cache: HIT response without touching upstream workers.',
+      activeNodes: ['reverse-proxy', 'cache-layer'],
+      packet: { from: 'reverse-proxy', to: 'cache-layer', label: 'Check Cache Key', type: 'cached' },
+    },
+    {
+      step: 4,
+      title: 'Step 4: Upstream Request Forwarding',
+      description: 'Cache miss: Nginx inspects the URI path /api/feed and forwards the sanitized request to App Server 02 (private IP 10.0.1.15) over high-speed internal fiber with X-Forwarded-For headers.',
+      activeNodes: ['reverse-proxy', 'app-server-2'],
+      packet: { from: 'reverse-proxy', to: 'app-server-2', label: 'Forward to 10.0.1.15:8080', type: 'request' },
+    },
+    {
+      step: 5,
+      title: 'Step 5: Database Query Execution',
+      description: 'App Server 02 queries the read-replica database to construct the client feed dataset, formatting the response payload into optimized JSON.',
+      activeNodes: ['app-server-2', 'database'],
+      packet: { from: 'app-server-2', to: 'database', label: 'SELECT * FROM feed', type: 'request' },
+    },
+    {
+      step: 6,
+      title: 'Step 6: Streaming Response to Client',
+      description: 'The response flows from database to App Server 02, then to Nginx. Nginx stores a copy in cache, compresses the payload with Gzip/Brotli, and streams it back to the client over TLS.',
+      activeNodes: ['app-server-2', 'reverse-proxy', 'client-1'],
+      packet: { from: 'reverse-proxy', to: 'client-1', label: '200 OK (Gzip JSON)', type: 'response' },
+    },
+  ],
+  interactiveComponents: [
+    {
+      id: 'client-devices',
+      name: 'Client Devices (Public Internet)',
+      role: 'Request Initiators',
+      description: 'Mobile phones, web browsers, and third-party API clients interacting across unpredictable public networks.',
+      metrics: [
+        { label: 'Latency', value: '45-120 ms' },
+        { label: 'Protocol', value: 'HTTP/2 / HTTP/3 over QUIC' },
+      ],
+      technologies: ['Chrome', 'Safari', 'iOS SDK', 'Android OkHttp'],
+    },
+    {
+      id: 'reverse-proxy',
+      name: 'Reverse Proxy (Nginx / Envoy / HAProxy)',
+      role: 'Perimeter Gateway & SSL Offloader',
+      description: 'The front door of your system infrastructure. Terminates TLS, caches static files, enforces rate limiting, rewrites headers, and shields backend servers from exposure.',
+      metrics: [
+        { label: 'Throughput', value: '150,000 req/sec' },
+        { label: 'Active Connections', value: '25,000' },
+        { label: 'TLS Handshake', value: '< 2.5 ms' },
+      ],
+      technologies: ['Nginx', 'Envoy Proxy', 'HAProxy', 'Traefik', 'Cloudflare Edge'],
+    },
+    {
+      id: 'cache-layer',
+      name: 'Reverse Proxy RAM/NVMe Cache',
+      role: 'Static & Micro-Response Cache',
+      description: 'Stores hot HTTP payloads by URI and headers so Nginx serves cached responses in under 2ms without touching backend servers.',
+      metrics: [
+        { label: 'Cache Hit Ratio', value: '91.4%' },
+        { label: 'Read Latency', value: '0.9 ms' },
+      ],
+      technologies: ['Nginx proxy_cache', 'Varnish', 'RAM tmpfs'],
+    },
+    {
+      id: 'app-servers',
+      name: 'Upstream Application Servers',
+      role: 'Business Logic Execution',
+      description: 'Stateless application instances running inside a private virtual cloud (VPC). Completely inaccessible from the public internet.',
+      metrics: [
+        { label: 'Cluster Size', value: '8 Instances' },
+        { label: 'Avg CPU Load', value: '38%' },
+        { label: 'P99 Latency', value: '18 ms' },
+      ],
+      technologies: ['Node.js', 'Go Gin', 'Java Spring Boot', 'Python FastAPI'],
+    },
+    {
+      id: 'database',
+      name: 'Primary Database & Storage',
+      role: 'Persistent Data Layer',
+      description: 'Stateful relational or NoSQL database holding user accounts, orders, and application state.',
+      metrics: [
+        { label: 'IOPS', value: '12,000' },
+        { label: 'Query P95', value: '4.2 ms' },
+      ],
+      technologies: ['PostgreSQL', 'MySQL', 'MongoDB', 'Redis Cluster'],
+    },
+  ],
+  realWorldExample: {
+    company: 'Netflix',
+    scenario: 'Handling 2+ billion daily playback and metadata requests across hundreds of millions of smart TVs and mobile devices.',
+    implementation: 'Netflix engineered Zuul 2 and later customized Envoy as their edge reverse proxy tier. The reverse proxy terminates millions of concurrent TLS connections, injects security context tokens (Passport), and routes requests to hundreds of backend microservices (Recommendations, Playback, Billing) while isolating failures.',
+    scaleDetails: 'Over 100+ billion requests per day routed with sub-5ms internal edge processing overhead.',
+  },
+  advantages: [
+    'Security & Anonymity: Backend server private IPs are completely cloaked; attackers cannot direct-target application nodes.',
+    'SSL/TLS Termination: Compute-heavy public cryptographic negotiations occur once at the proxy layer.',
+    'Intelligent Content Caching: Delivers static and micro-cached dynamic responses without waking up application workers.',
+    'Centralized Traffic Inspection: Single control plane for WAF rules, DDoS mitigation, and audit logging.',
+    'Zero-Downtime Deployments: Traffic can be seamlessly shifted away from servers undergoing software updates.',
+  ],
+  disadvantages: [
+    'Single Point of Failure: If the reverse proxy cluster crashes without an active-passive failover (e.g. Keepalived / VRRP), the entire site goes offline.',
+    'Added Network Hop: Introduces a slight processing delay (typically 0.5 to 2 ms) for requests.',
+    'Configuration Complexity: Incorrectly configured headers (e.g., missing X-Forwarded-For) can break downstream geo-location and analytics.',
+    'Maintenance Overhead: High-traffic proxies require careful tuning of file descriptors (ulimit -n) and TCP buffer allocations.',
+  ],
+  relatedTopics: [
+    { id: 'load-balancing-fundamentals', title: 'What is Load Balancing?', module: 'system-design' },
+    { id: 'caching-fundamentals', title: 'Caching Strategies & Redis', module: 'system-design' },
+    { id: 'api-gateway-architecture', title: 'API Gateway Architecture', module: 'system-design' },
+    { id: 'ssl-tls-handshake', title: 'SSL/TLS Handshake Deep Dive', module: 'networking' },
+  ],
+  interviewQuestions: [
+    {
+      level: 'beginner',
+      question: 'What is the fundamental difference between a Forward Proxy and a Reverse Proxy?',
+      answer: 'A Forward Proxy acts on behalf of clients (users) to hide client IP addresses, bypass corporate firewalls, or inspect outbound client traffic. The internet server does not know who the actual client is. In contrast, a Reverse Proxy acts on behalf of backend servers to hide server IP addresses, terminate SSL, and load balance incoming requests. The client does not know which backend server actually handled their request.',
+      keyPoints: [
+        'Forward Proxy = Protects / hides the client',
+        'Reverse Proxy = Protects / hides the server',
+        'Clients configure forward proxies explicitly; reverse proxies are completely transparent to clients',
+      ],
+    },
+    {
+      level: 'intermediate',
+      question: 'How does SSL Termination at the Reverse Proxy benefit high-scale systems, and what are its security trade-offs?',
+      answer: 'SSL Termination offloads the resource-intensive asymmetric cryptographic calculations (RSA or ECDHE keys) from backend application servers onto specialized proxy hardware or optimized software (like Nginx/HAProxy). This frees up significant CPU and RAM on application instances. The trade-off is that traffic between the reverse proxy and internal backend servers travels unencrypted unless internal mTLS (mutual TLS) or a private VPC overlay is configured.',
+      keyPoints: [
+        'Saves CPU on application instances',
+        'Centralizes SSL certificate management (single place to renew certificates)',
+        'Requires zero-trust internal network security (VPC isolation or mTLS) to prevent sniffing inside the data center',
+      ],
+    },
+    {
+      level: 'advanced',
+      question: 'How do you prevent a Reverse Proxy from becoming a Single Point of Failure (SPOF) in production?',
+      answer: 'To eliminate the SPOF, production architectures deploy a high-availability (HA) pair of reverse proxies utilizing Virtual Router Redundancy Protocol (VRRP) with tools like Keepalived. Both proxies share a floating Virtual IP (VIP). The active node handles traffic; if its health daemon stops heartbeating, the passive standby node automatically claims the VIP within milliseconds via ARP broadcasting. At global scale, DNS Anycast (BGP routing) or Cloud Anycast (e.g., Cloudflare/AWS Global Accelerator) is used to broadcast the same IP address to multiple geographically distributed reverse proxy data centers simultaneously.',
+      keyPoints: [
+        'VRRP / Keepalived with floating VIP for local active-passive redundancy',
+        'Equal-Cost Multi-Path (ECMP) routing with BGP for active-active local clustering',
+        'BGP Anycast for global automated geo-failover and edge redundancy',
+      ],
+    },
+  ],
+  quiz: [
+    {
+      id: 'rp-q1',
+      question: 'Which of the following best describes the primary entity protected by a reverse proxy?',
+      options: [
+        'The client\'s browser and identity',
+        'The internet service provider (ISP)',
+        'The backend web and application servers',
+        'The DNS root nameservers',
+      ],
+      correctAnswer: 2,
+      explanation: 'A reverse proxy sits in front of backend servers to shield their private IP addresses, handle SSL termination, and distribute load, whereas a forward proxy protects the client.',
+    },
+    {
+      id: 'rp-q2',
+      question: 'What HTTP header does a reverse proxy commonly append so upstream servers can identify the true client IP?',
+      options: [
+        'X-Proxy-Agent',
+        'X-Forwarded-For',
+        'Host-Redirect-Origin',
+        'Authorization-Bearer',
+      ],
+      correctAnswer: 1,
+      explanation: 'The X-Forwarded-For header contains the comma-separated list of IP addresses representing the client and any intermediate proxies.',
+    },
+    {
+      id: 'rp-q3',
+      question: 'What is "SSL Offloading" (or SSL Termination) in the context of a reverse proxy?',
+      options: [
+        'Disabling encryption completely across the entire platform',
+        'Decrypting incoming HTTPS traffic at the reverse proxy so backend servers handle plain HTTP or lightweight internal TLS',
+        'Moving SSL keys onto client browsers',
+        'Using self-signed certificates for all public visitors',
+      ],
+      correctAnswer: 1,
+      explanation: 'SSL Termination decrypts public HTTPS traffic at the reverse proxy boundary, sparing internal application servers from expensive cryptographic overhead.',
+    },
+    {
+      id: 'rp-q4',
+      question: 'In Nginx, which directive is used to forward requests to a designated upstream backend pool?',
+      options: [
+        'proxy_pass',
+        'forward_to',
+        'route_target',
+        'dispatch_backend',
+      ],
+      correctAnswer: 0,
+      explanation: 'The proxy_pass directive (e.g., proxy_pass http://backend_pool;) specifies the protocol and address of the upstream server to which requests are routed.',
+    },
+    {
+      id: 'rp-q5',
+      question: 'How does a reverse proxy improve static asset delivery performance for end users?',
+      options: [
+        'By rewriting JavaScript code dynamically',
+        'By caching static assets in local RAM/SSD and serving them directly without querying backend application servers',
+        'By forcing clients to store infinite browser cache',
+        'By increasing the client\'s physical internet bandwidth',
+      ],
+      correctAnswer: 1,
+      explanation: 'Reverse proxies store cached copies of frequently requested static files (images, JS, CSS, common API responses) and serve them directly with minimal latency.',
+    },
+  ],
+};

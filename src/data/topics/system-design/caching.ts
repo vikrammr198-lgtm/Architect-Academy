@@ -1,0 +1,251 @@
+import { TopicContent } from '../../../types';
+
+export const cachingTopic: TopicContent = {
+  id: 'caching-fundamentals',
+  title: 'Caching Strategies & Redis Architecture (Hit, Miss & Invalidation)',
+  module: 'system-design',
+  category: 'Caching Strategies & Architecture',
+  readTime: '10 min',
+  difficulty: 'Beginner',
+  summary: 'Caching stores copies of data in high-speed, temporary storage (like RAM) so future requests for that data can be served dramatically faster than querying the primary database.',
+  introduction: {
+    definition: 'Caching is the technique of keeping frequently or recently accessed data in ultra-fast, volatile storage (such as in-memory Redis or Memcached) to reduce I/O bottlenecks and latency.',
+    analogousStory: 'Imagine you are writing a research paper at a library. If you had to walk across the library floor to the encyclopedia stacks every single time you needed a date, you would waste hours. Instead, you grab 3 relevant books and keep them right on your study desk. When you need a fact, you glance at your desk first (Cache Hit). If it is not there, you walk to the stacks (Cache Miss) and bring the new book to your desk.',
+    keyTakeaway: 'Reading from RAM takes ~100 nanoseconds; reading from an SSD takes ~100 microseconds (1,000x slower); querying a relational database across a network can take 10-50 milliseconds.',
+  },
+  whyRequired: {
+    problemsSolved: [
+      'Relational databases getting choked by millions of duplicate read queries for the same product or post.',
+      'High latency degrading user experience (50ms vs 1ms API response time).',
+      'Database connection pool exhaustion during flash sales or breaking news.',
+      'Expensive compute costs associated with recalculating complex aggregations.',
+    ],
+    realWorldImpact: 'E-commerce sites like Amazon observed that every 100ms of added latency decreased sales by 1%. In-memory caching brings median API latencies below 5ms.',
+    metricsAffected: [
+      'Cache Hit Ratio (aiming for > 95% in read-heavy applications)',
+      'Database CPU and disk IOPS reduction by up to 90%',
+      'System throughput (QPS capacity increased 10x-50x)',
+    ],
+  },
+  coreArchitecture: {
+    description: 'A distributed cache sits between application servers and the persistent database layer, operating as an ultra-low-latency in-memory key-value store.',
+    components: [
+      {
+        name: 'In-Memory Cache Cluster (Redis)',
+        role: 'Sub-Millisecond Read/Write Store',
+        details: 'Stores key-value pairs, hashes, sorted sets, and lists in RAM. Supports replication, persistence (RDB/AOF), and clustering.',
+      },
+      {
+        name: 'Application Server Cache Client',
+        role: 'Query Orchestrator',
+        details: 'Evaluates Cache-Aside, Write-Through, or Write-Behind policies, generating uniform hashing keys.',
+      },
+      {
+        name: 'Persistent Database (PostgreSQL/MySQL)',
+        role: 'Single Source of Truth',
+        details: 'Durable disk storage that guarantees ACID transactions and permanent consistency.',
+      },
+      {
+        name: 'Eviction Manager (LRU/LFU)',
+        role: 'Memory Governance',
+        details: 'When RAM reaches the maxmemory threshold, automatically discards stale keys based on LRU (Least Recently Used) or LFU (Least Frequently Used).',
+      },
+    ],
+  },
+  howItWorks: {
+    steps: [
+      { stepNumber: 1, action: 'Query Cache', technicalDetail: 'Application receives GET /products/42 and queries Redis using key product:42.' },
+      { stepNumber: 2, action: 'Cache Hit Evaluation', technicalDetail: 'If key exists, Redis returns serialized JSON in < 1ms. App returns immediately to user.' },
+      { stepNumber: 3, action: 'Cache Miss Fallback', technicalDetail: 'If key is null (Cache Miss), application falls back to querying the SQL database (taking 25ms).' },
+      { stepNumber: 4, action: 'Cache Population & TTL', technicalDetail: 'Application writes fetched data into Redis with an explicit TTL (e.g. EX 3600 for 1 hour) so future queries hit cache.' },
+    ],
+  },
+  visualizationId: 'caching-3d',
+  visualizationScene: 'caching',
+  visualizationModes: [
+    { id: 'cache-miss', label: 'Simulate Cache Miss -> Populate' },
+    { id: 'cache-hit', label: 'Simulate Instant Cache Hit' },
+  ],
+  visualizationType: 'system-design',
+  animationSteps: [
+    {
+      step: 1,
+      title: 'Step 1: User Requests Product Details',
+      description: 'Client requests product ID #4092. Application server checks whether the item is already warm in Redis cache.',
+      activeNodes: ['client-1', 'app-server'],
+      packet: { from: 'client-1', to: 'app-server', label: 'GET /item/4092', type: 'request' },
+    },
+    {
+      step: 2,
+      title: 'Step 2: Checking Redis Cache (Cache Miss Case)',
+      description: 'App Server queries Redis: GET item:4092. Cache returns NIL (Key does not exist - Cache Miss).',
+      activeNodes: ['app-server', 'redis-cache'],
+      packet: { from: 'app-server', to: 'redis-cache', label: 'GET item:4092 -> NIL', type: 'cached' },
+    },
+    {
+      step: 3,
+      title: 'Step 3: Querying the Relational Database',
+      description: 'App Server queries the primary PostgreSQL database across the internal network to retrieve the row from disk.',
+      activeNodes: ['app-server', 'database'],
+      packet: { from: 'app-server', to: 'database', label: 'SELECT * WHERE id=4092', type: 'request' },
+    },
+    {
+      step: 4,
+      title: 'Step 4: Populating Redis with TTL',
+      description: 'App Server writes the retrieved record into Redis with SET item:4092 <data> EX 300 (5-minute Time-To-Live).',
+      activeNodes: ['app-server', 'redis-cache'],
+      packet: { from: 'app-server', to: 'redis-cache', label: 'SET item:4092 (TTL 300s)', type: 'sync' },
+    },
+    {
+      step: 5,
+      title: 'Step 5: Subsequent Request Hits Cache Instantly',
+      description: 'Second client requests the exact same item. App Server queries Redis and receives an instant CACHE HIT in 0.8ms!',
+      activeNodes: ['client-2', 'app-server', 'redis-cache'],
+      packet: { from: 'redis-cache', to: 'app-server', label: 'CACHE HIT (0.8ms)', type: 'response' },
+    },
+  ],
+  interactiveComponents: [
+    {
+      id: 'client-1',
+      name: 'Client Browser',
+      role: 'Data Consumer',
+      description: 'Issues product catalog lookup requests demanding sub-20ms response times.',
+      metrics: [{ label: 'Target SLA', value: '< 15 ms' }],
+      technologies: ['Web Browser', 'Mobile App'],
+    },
+    {
+      id: 'app-server',
+      name: 'Application Server',
+      role: 'Cache-Aside Logic Engine',
+      description: 'Executes cache check, database queries, serialization, and TTL management.',
+      metrics: [
+        { label: 'Cache Policy', value: 'Cache-Aside (Lazy Loading)' },
+        { label: 'Hit Ratio', value: '94.2%' },
+      ],
+      technologies: ['Node.js', 'Go', 'Python'],
+    },
+    {
+      id: 'redis-cache',
+      name: 'Redis In-Memory Cache',
+      role: 'Sub-Millisecond Data Store',
+      description: 'Ultra-fast in-memory key-value database running on RAM.',
+      metrics: [
+        { label: 'Memory Used', value: '3.8 GB / 8 GB' },
+        { label: 'Ops/sec', value: '85,000' },
+        { label: 'Avg Latency', value: '0.65 ms' },
+      ],
+      technologies: ['Redis 7.2', 'Memcached', 'Dragonfly'],
+    },
+    {
+      id: 'database',
+      name: 'Primary SQL Database',
+      role: 'Durable System of Record',
+      description: 'Disk-backed relational store ensuring data durability.',
+      metrics: [
+        { label: 'Disk IOPS', value: '3,200' },
+        { label: 'Avg Query Time', value: '18 ms' },
+      ],
+      technologies: ['PostgreSQL', 'MySQL'],
+    },
+  ],
+  realWorldExample: {
+    company: 'Twitter / X',
+    scenario: 'Serving home timelines containing millions of combined tweets to active users.',
+    implementation: 'Twitter utilized an enormous in-memory Redis cluster. When a user posts a tweet, background workers fan out the tweet ID to the Redis in-memory timeline lists of all their followers. When a follower opens Twitter, their timeline is read instantly from Redis memory without querying main MySQL or Cassandra clusters.',
+    scaleDetails: 'Tens of terabytes in RAM serving millions of timeline reads per second.',
+  },
+  advantages: [
+    'Dramatic speedup: Response times drop from tens of milliseconds to sub-millisecond.',
+    'Protects backend databases from crashing under unexpected viral traffic spikes.',
+    'Cost efficiency: Fewer database replicas and CPU-heavy SQL instances required.',
+    'Reduces network bandwidth between application servers and database clusters.',
+  ],
+  disadvantages: [
+    'Stale Data Risk: If the database is updated and the cache is not invalidated, users see obsolete information.',
+    'Memory Cost: RAM is significantly more expensive per gigabyte than NVMe SSD storage.',
+    'Cache Stampede (Thundering Herd): When a popular cache key expires, thousands of concurrent requests all hit the DB at once.',
+    'Cold Start penalty: Empty cache after system restart requires warm-up.',
+  ],
+  relatedTopics: [
+    { id: 'redis-architecture', title: 'Redis Architecture Deep Dive', module: 'system-design' },
+    { id: 'cdn-architecture', title: 'CDN Edge Caching', module: 'system-design' },
+    { id: 'reverse-proxy', title: 'Reverse Proxy Caching', module: 'system-design' },
+  ],
+  interviewQuestions: [
+    {
+      level: 'beginner',
+      question: 'What is the Cache-Aside pattern, and how does it work?',
+      answer: 'In the Cache-Aside (Lazy Loading) pattern, the application code directly orchestrates caching: 1) App first checks the cache for data. 2) If found (Cache Hit), it returns it. 3) If not found (Cache Miss), the app queries the database, writes the result into the cache with a TTL, and then returns the data. Data is only loaded into the cache when it is actually requested.',
+      keyPoints: ['Application manages cache reads and writes directly', 'Only requested data resides in cache', 'Resilient to cache node failures (falls back to DB)'],
+    },
+    {
+      level: 'intermediate',
+      question: 'What is the "Thundering Herd" (Cache Stampede) problem, and how do you prevent it?',
+      answer: 'A Cache Stampede occurs when a very popular key (e.g. breaking news or black friday product) expires, and thousands of concurrent requests all experience a Cache Miss simultaneously. All thousands of threads query the database at the same time, overwhelming it. Solutions include: 1) Mutex / Distributed Lock: Only the first thread gets a lock to query the DB and refresh cache; others wait. 2) Probabilistic Early Expiration (XFetch algorithm): Recomputing the cache value in the background before it actually expires. 3) Background cron refresh.',
+      keyPoints: ['Thousands of concurrent misses crush DB', 'Prevention via Mutex locking (Redis SETNX)', 'Probabilistic early expiration (XFetch)'],
+    },
+    {
+      level: 'advanced',
+      question: 'Explain the trade-offs between LRU, LFU, and FIFO cache eviction policies.',
+      answer: '1) LRU (Least Recently Used) discards the item that hasn\'t been accessed for the longest time. Ideal for temporal locality (what was accessed recently will likely be accessed again). 2) LFU (Least Frequently Used) tracks access counts and evicts items with the lowest frequency. Ideal for items with consistent long-term popularity, though newly inserted items risk premature eviction before building up frequency. 3) FIFO (First In, First Out) evicts the oldest item inserted regardless of how frequently it is accessed; simple and low CPU overhead, but prone to discarding hot keys.',
+      keyPoints: ['LRU = Temporal recency (most widely used)', 'LFU = Frequency count (protects long-term popular items)', 'FIFO = Insertion order (simple, suboptimal hit ratio)'],
+    },
+  ],
+  quiz: [
+    {
+      id: 'cache-q1',
+      question: 'What is a "Cache Hit"?',
+      options: [
+        'When the cache server is attacked by DDoS traffic',
+        'When requested data is successfully found in the cache memory',
+        'When the database crashes due to memory overflow',
+        'When a key is evicted by the LRU algorithm',
+      ],
+      correctAnswer: 1,
+      explanation: 'A Cache Hit occurs when the requested key exists in the cache, enabling immediate return without touching the database.',
+    },
+    {
+      id: 'cache-q2',
+      question: 'What is the primary purpose of a TTL (Time-To-Live) on a cache key?',
+      options: [
+        'To speed up CPU clock cycles',
+        'To ensure stale data eventually expires and memory is freed',
+        'To encrypt the cached data',
+        'To disable network access to the server',
+      ],
+      correctAnswer: 1,
+      explanation: 'TTL ensures that cached items expire automatically after a specified duration, preventing infinite staleness.',
+    },
+    {
+      id: 'cache-q3',
+      question: 'Which caching strategy writes data simultaneously to both the cache and the primary database before confirming success?',
+      options: ['Write-Behind (Write-Back)', 'Write-Through', 'Cache-Aside', 'Read-Through'],
+      correctAnswer: 1,
+      explanation: 'Write-Through writes to both cache and database synchronously, ensuring strong consistency at the expense of write latency.',
+    },
+    {
+      id: 'cache-q4',
+      question: 'What does the LRU eviction policy discard when cache memory is full?',
+      options: [
+        'The largest file by byte size',
+        'The item that has not been read or written for the longest duration',
+        'The item with the lowest access count',
+        'A randomly chosen key',
+      ],
+      correctAnswer: 1,
+      explanation: 'Least Recently Used (LRU) removes the item whose last access timestamp is the oldest.',
+    },
+    {
+      id: 'cache-q5',
+      question: 'Why is Redis faster than traditional relational databases like PostgreSQL for read operations?',
+      options: [
+        'Redis holds all data primarily in RAM and utilizes an optimized single-threaded event loop without disk I/O overhead',
+        'Redis uses AI to predict user queries',
+        'PostgreSQL cannot store text data',
+        'Redis does not use TCP/IP',
+      ],
+      correctAnswer: 0,
+      explanation: 'Redis stores datasets in main memory (RAM), avoiding disk seek latencies, and processes operations via an asynchronous event loop.',
+    },
+  ],
+};
